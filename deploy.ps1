@@ -21,11 +21,22 @@ $BackupAsar = "$AsarPath.backup"
 $TempDir = Join-Path $env:TEMP "antigravity_safe_deploy"
 
 # 3. Yedek kontrol - yoksa mevcut asar'i yedekle
+$AsarUnpacked = "$AsarPath.unpacked"
+$BackupAsarUnpacked = "$BackupAsar.unpacked"
+
 if (Test-Path $BackupAsar) {
     Write-Host "[2/6] Yedek bulundu: $BackupAsar" -ForegroundColor Green
+    if ((Test-Path $AsarUnpacked) -and -not (Test-Path $BackupAsarUnpacked)) {
+        Write-Host "   Yedek unpacked klasoru olusturuluyor..." -ForegroundColor Yellow
+        Copy-Item $AsarUnpacked $BackupAsarUnpacked -Recurse -Force
+        Write-Host "   Yedek unpacked klasoru olusturuldu." -ForegroundColor Green
+    }
 } elseif (Test-Path $AsarPath) {
     Write-Host "[2/6] Yedek yok - mevcut asar yedekleniyor..." -ForegroundColor Yellow
     Copy-Item $AsarPath $BackupAsar -Force
+    if (Test-Path $AsarUnpacked) {
+        Copy-Item $AsarUnpacked $BackupAsarUnpacked -Recurse -Force
+    }
     Write-Host "   Yedek olusturuldu." -ForegroundColor Green
 } else {
     Write-Host "[2/6] HATA: app.asar bulunamadi: $AsarPath" -ForegroundColor Red
@@ -44,8 +55,13 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host "   OK - Gecici dizin: $TempDir" -ForegroundColor Green
 
-# 5. Sadece dist klasorunu projeden kopyala (orijinal node_modules korunur!)
-Write-Host "[4/6] dist klasoru guncelleniyor..." -ForegroundColor Yellow
+# 5. Sadece dist klasorunu projeden kopyala ve gereksizleri sil
+Write-Host "[4/6] dist klasoru guncelleniyor ve gereksiz dosyalar temizleniyor..." -ForegroundColor Yellow
+
+# Temizleme
+if (Test-Path (Join-Path $TempDir ".git")) { Remove-Item (Join-Path $TempDir ".git") -Recurse -Force }
+if (Test-Path (Join-Path $TempDir "scratch")) { Remove-Item (Join-Path $TempDir "scratch") -Recurse -Force }
+
 $srcDist = Join-Path $ProjectDir "dist"
 $destDist = Join-Path $TempDir "dist"
 
@@ -61,11 +77,19 @@ if (Test-Path $srcRepack) {
 
 # 6. Tekrar paketle
 Write-Host "[5/6] app.asar paketleniyor..." -ForegroundColor Yellow
-npx -y @electron/asar pack $TempDir $AsarPath
+
+# Mevcut unpacked klasorunu sil ki temiz olussun
+if (Test-Path $AsarUnpacked) { Remove-Item $AsarUnpacked -Recurse -Force }
+
+npx -y @electron/asar pack $TempDir $AsarPath --unpack-dir "node_modules"
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "   HATA: Paketleme basarisiz! Yedek geri yukleniyor..." -ForegroundColor Red
     Copy-Item $BackupAsar $AsarPath -Force
+    if (Test-Path $BackupAsarUnpacked) {
+        if (Test-Path $AsarUnpacked) { Remove-Item $AsarUnpacked -Recurse -Force }
+        Copy-Item $BackupAsarUnpacked $AsarUnpacked -Recurse -Force
+    }
     Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
     exit 1
 }
