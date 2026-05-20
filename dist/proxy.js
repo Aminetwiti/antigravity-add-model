@@ -25,8 +25,9 @@ function generateModelPlaceholderId(model) {
         hash = ((hash << 5) + hash) + input.charCodeAt(i); // hash * 33 + c
         hash = hash & hash; // Force 32-bit integer
     }
-    const absHash = Math.abs(hash) % 900000;
-    return `MODEL_PLACEHOLDER_${absHash}`;
+    // Map to supported enums MODEL_PLACEHOLDER_M400 through MODEL_PLACEHOLDER_M599
+    const placeholderNum = 400 + (Math.abs(hash) % 200);
+    return `MODEL_PLACEHOLDER_M${placeholderNum}`;
 }
 
 /**
@@ -467,13 +468,24 @@ function mapGeminiToAnthropic(geminiBody, modelName) {
         }
     }
 
-    return {
+    const result = {
         model: modelName,
         messages: messages,
         system: system,
-        max_tokens: geminiBody.generationConfig?.maxOutputTokens ?? 4000,
-        temperature: geminiBody.generationConfig?.temperature ?? 0.7
+        max_tokens: geminiBody.generationConfig?.maxOutputTokens ?? 16000
     };
+
+    // Claude thinking models (opus-4, sonnet-4, etc.) don't support temperature
+    // Only add temperature for non-thinking models
+    const isThinkingModel = /opus-4|sonnet-4|claude-4/i.test(modelName);
+    if (!isThinkingModel) {
+        const temp = geminiBody.generationConfig?.temperature;
+        if (temp !== undefined && temp !== null) {
+            result.temperature = temp;
+        }
+    }
+
+    return result;
 }
 
 /**
@@ -888,7 +900,7 @@ function handleCustomModelRequest(res, model, geminiBody, isStream) {
     } else if (provider === 'anthropic') {
         payload = mapGeminiToAnthropic(geminiBody, model.externalModelName);
         headers['x-api-key'] = model.apiKey;
-        headers['anthropic-version'] = '2023-06-01';
+        headers['anthropic-version'] = '2025-04-01';
         headers['Content-Type'] = 'application/json';
     } else if (provider === 'google') {
         payload = geminiBody;
