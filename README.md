@@ -116,15 +116,20 @@ antigravity-add-model/
 
 ## Supported Providers
 
-| Provider | Format | Environment Variable | Example API URL |
-|---|---|---|---|
-| OpenAI | `openai` | `OPENAI_API_KEY` | `https://api.openai.com/v1/chat/completions` |
-| Anthropic | `anthropic` | `ANTHROPIC_API_KEY` | `https://api.anthropic.com/v1/messages` |
-| Ollama | `ollama` | *(none)* | `http://localhost:11434/v1/chat/completions` |
-| Google AI Studio | `google` | *(in apiKey field)* | `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent` |
-| Custom (OpenAI-compatible) | `custom` | *(in apiKey field)* | `https://api.together.xyz/v1` |
+You can configure **multiple models from different providers simultaneously**. All of them will appear together in the model selection dropdown in the Antigravity chat interface, and you can switch between them in real-time.
 
-Custom provider maps to OpenAI format automatically. URLs ending in `/v1` get `/chat/completions` appended.
+| Provider | Format | Environment Variable / Key | Default API URL |
+|---|---|---|---|
+| **OpenAI** | `openai` | `apiKey` (or `OPENAI_API_KEY`) | `https://api.openai.com/v1/chat/completions` |
+| **Anthropic** | `anthropic` | `apiKey` (or `ANTHROPIC_API_KEY`) | `https://api.anthropic.com/v1/messages` |
+| **Ollama** (Local) | `ollama` | *(None required)* | `http://localhost:11434/v1/chat/completions` |
+| **Google AI Studio** | `google` | `apiKey` *(Gemini API Key)* | `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent` |
+| **Custom (OpenAI-compatible)** | `custom` | `apiKey` *(Provider API Key)* | E.g. `https://api.together.xyz/v1`, `https://api.groq.com/openai/v1`, etc. |
+
+> [!NOTE]
+> For the **Custom** provider, URLs ending in `/v1` automatically get `/chat/completions` appended. It is fully compatible with Together AI, OpenRouter, Groq, Mistral, and any other OpenAI-compliant endpoint.
+
+---
 
 ## Installation
 
@@ -145,16 +150,56 @@ npx -y @electron/asar pack . "<antigravity_resources_dir>/app.asar"
 - **Windows**: `C:\Users\<User>\AppData\Local\Programs\antigravity\resources\`
 - **macOS**: `/Applications/Antigravity.app/Contents/Resources/`
 
+---
+
 ## Configuration
 
-Models are stored in `~/.gemini/antigravity/custom_models.json`. You can use the inline "Add Model" form in **Settings → Models** or edit the file directly:
+Models are stored in your home directory at `~/.gemini/antigravity/custom_models.json`. You can easily add them via the **"Add Model"** modal in Settings, or edit the JSON file directly. 
+
+Here is an example of a **fully loaded** `custom_models.json` file configuring **multiple models across all providers at the same time**:
 
 ```json
 {
   "models": [
     {
+      "name": "models/gpt-4o",
+      "displayName": "GPT-4o (OpenAI)",
+      "description": "OpenAI GPT-4o model via official API",
+      "provider": "openai",
+      "apiKey": "sk-proj-...",
+      "apiUrl": "https://api.openai.com/v1/chat/completions",
+      "externalModelName": "gpt-4o"
+    },
+    {
+      "name": "models/claude-3-5-sonnet",
+      "displayName": "Claude 3.5 Sonnet",
+      "description": "Anthropic Claude 3.5 Sonnet via official API",
+      "provider": "anthropic",
+      "apiKey": "sk-ant-...",
+      "apiUrl": "https://api.anthropic.com/v1/messages",
+      "externalModelName": "claude-3-5-sonnet-latest"
+    },
+    {
+      "name": "models/gemini-1.5-pro",
+      "displayName": "Gemini 1.5 Pro (AI Studio)",
+      "description": "Gemini 1.5 Pro via Google AI Studio Key",
+      "provider": "google",
+      "apiKey": "AIzaSy...",
+      "apiUrl": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent",
+      "externalModelName": "gemini-1.5-pro"
+    },
+    {
+      "name": "models/llama3",
+      "displayName": "Llama 3 (Local Ollama)",
+      "description": "Local Llama 3 model run on Ollama port 11434",
+      "provider": "ollama",
+      "apiKey": "",
+      "apiUrl": "http://localhost:11434/v1/chat/completions",
+      "externalModelName": "llama3"
+    },
+    {
       "name": "models/deepseek-ai/deepseek-v4-pro",
-      "displayName": "DeepSeek V4 Pro",
+      "displayName": "DeepSeek V4 Pro (Together)",
       "description": "DeepSeek V4 Pro via Together API",
       "provider": "custom",
       "apiKey": "YOUR_TOGETHER_API_KEY",
@@ -165,17 +210,17 @@ Models are stored in `~/.gemini/antigravity/custom_models.json`. You can use the
 }
 ```
 
-### Fields
+### Fields Explanation
 
 | Field | Description |
 |---|---|
-| `name` | Internal identifier, slug format preferred |
-| `displayName` | Shown in model dropdown and settings |
-| `description` | Shown in model list |
-| `provider` | `openai`, `anthropic`, `ollama`, `google`, or `custom` |
-| `apiKey` | API key for the external provider |
-| `apiUrl` | Base URL for the API endpoint |
-| `externalModelName` | Model name sent to the external API |
+| `name` | Internal model identifier (e.g. `models/gpt-4o`). Must start with `models/` prefix. |
+| `displayName` | The friendly name that will appear in the Antigravity chat model dropdown. |
+| `description` | Subtitle/description displayed in the Custom Models list in Settings. |
+| `provider` | One of `openai`, `anthropic`, `ollama`, `google`, or `custom`. This determines how the request and response formats are translated. |
+| `apiKey` | The API credential for the provider. Leave empty `""` for local providers like Ollama. |
+| `apiUrl` | The target endpoint. This gets automatically pre-filled by the UI dropdown selection. |
+| `externalModelName` | The exact model ID expected by the target provider (e.g., `gpt-4o`, `claude-3-5-sonnet-latest`, `llama3`). |
 
 ## UI Features
 
