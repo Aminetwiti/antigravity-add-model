@@ -35,16 +35,16 @@ Antigravity IDE
 #### Security & Data
 | File | Role |
 |---|---|
-| [cryptoStore.ts](src/cryptoStore.ts) | AES-256-GCM API key encryption via Electron `safeStorage` |
-| [schemaValidator.ts](src/schemaValidator.ts) | Runtime schema validation for API responses, custom models, and streaming chunks |
+| [cryptoStore.js](dist/cryptoStore.js) | AES-256-GCM API key encryption via Electron `safeStorage` |
+| [schemaValidator.js](dist/schemaValidator.js) | Runtime schema validation for API responses, custom models, and streaming chunks |
 
 #### UI & App Integration
 | File | Role |
 |---|---|
-| [preload.ts](src/preload.ts) | UI injection: Custom Models dashboard in Settings → Models, inline Add Model modal with animations, connectivity test button |
-| [main.ts](src/main.ts) | App lifecycle: intercepts and blocks `SetCloudCodeURL` requests to prevent the frontend from overriding the proxy endpoint |
-| [ipcHandlers.ts](src/ipcHandlers.ts) | Backend IPC: `storage:get-custom-models`, `storage:save-custom-model`, `storage:delete-custom-model`, `storage:test-model-connection` |
-| [languageServer.ts](src/languageServer.ts) | Modified language server manager, starts proxy on app launch |
+| [preload.js](dist/preload.js) | UI injection: Custom Models dashboard in Settings → Models, inline Add Model modal with animations, connectivity test button |
+| [main.js](dist/main.js) | App lifecycle: intercepts and blocks `SetCloudCodeURL` requests to prevent the frontend from overriding the proxy endpoint |
+| [ipcHandlers.js](dist/ipcHandlers.js) | Backend IPC: `storage:get-custom-models`, `storage:save-custom-model`, `storage:delete-custom-model`, `storage:test-model-connection` |
+| [languageServer.js](dist/languageServer.js) | Modified language server manager, starts proxy on app launch |
 
 #### Deployment Scripts
 | File | Platform |
