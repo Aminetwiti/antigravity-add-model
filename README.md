@@ -253,6 +253,28 @@ This stops Antigravity, packs the project's `dist/` into `app.asar`, deploys to 
 > [!TIP]
 > The deploy script uses `$PSScriptRoot` (script's own directory). Run it from anywhere — it always finds the project.
 
+### Automatic (macOS)
+
+```bash
+bash deploy.sh
+```
+
+This kills any running Antigravity process, extracts the current `app.asar` from `/Applications/Antigravity.app/Contents/Resources/`, replaces its `dist/` with the latest build, re-packages, and relaunches the app.
+
+> [!TIP]
+> Make the script executable first: `chmod +x deploy.sh`. Like the Windows version, it auto-detects the project directory via `$SCRIPT_DIR`.
+
+### Automatic (Linux)
+
+```bash
+bash deploy_linux.sh
+```
+
+Stops any running Antigravity process, auto-detects the `app.asar` location (common search paths: `~/.local/share/Programs/`, `/opt/`, `/usr/lib/`), replaces its `dist/` with the latest build, re-packages, and relaunches the app.
+
+> [!TIP]
+> Make the script executable first: `chmod +x deploy_linux.sh`. It automatically searches for the Antigravity installation across multiple standard Linux Electron app paths.
+
 ### Build from Source (TypeScript)
 
 ```bash
