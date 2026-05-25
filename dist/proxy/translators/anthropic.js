@@ -1,8 +1,37 @@
 "use strict";
-/**
- * Anthropic provider translator.
- * Handles Gemini ↔ Anthropic request/response mapping and streaming SSE events.
- */
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -11,6 +40,11 @@ exports.mapGeminiToAnthropic = mapGeminiToAnthropic;
 exports.mapAnthropicToGemini = mapAnthropicToGemini;
 exports.mapAnthropicChunkToGemini = mapAnthropicChunkToGemini;
 exports.mapGeminiToolsToAnthropic = mapGeminiToolsToAnthropic;
+/**
+ * Anthropic provider translator.
+ * Handles Gemini ↔ Anthropic request/response mapping and streaming SSE events.
+ */
+const path = __importStar(require("path"));
 const electron_log_1 = __importDefault(require("electron-log"));
 const utils_1 = require("./utils");
 const shared_1 = require("../shared");
@@ -107,8 +141,35 @@ function mapGeminiToAnthropic(geminiBody, modelName) {
                 else {
                     const roleStr = item.role === 'model' ? 'assistant' : item.role || 'user';
                     let content = '';
-                    if (item.parts)
-                        content = item.parts.map((p) => p.text || '').join('');
+                    if (item.parts) {
+                        const partsContent = [];
+                        for (const p of item.parts) {
+                            if (p.text) {
+                                partsContent.push(p.text);
+                            }
+                            else if (p.fileData) {
+                                const fd = p.fileData;
+                                try {
+                                    const url = new URL(fd.fileUri);
+                                    if (url.protocol === 'file:') {
+                                        const fs = require('fs');
+                                        partsContent.push(`[File:\n${fs.readFileSync(url.pathname.replace(/^\//, '').replace(/\//g, path.sep), 'utf-8')}\n]`);
+                                    }
+                                    else {
+                                        partsContent.push(`[File: ${fd.fileUri} (${fd.mimeType})]`);
+                                    }
+                                }
+                                catch {
+                                    partsContent.push(`[File: ${fd.fileUri} (${fd.mimeType})]`);
+                                }
+                            }
+                            else if (p.inlineData) {
+                                const id = p.inlineData;
+                                partsContent.push(`[${id.mimeType}: ${id.data}]`);
+                            }
+                        }
+                        content = partsContent.join('\n');
+                    }
                     if (roleStr === 'system') {
                         system = (system || '') + '\n' + content;
                     }

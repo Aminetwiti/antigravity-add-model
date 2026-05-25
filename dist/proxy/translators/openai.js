@@ -1,8 +1,37 @@
 "use strict";
-/**
- * OpenAI/Ollama provider translator.
- * Handles Gemini ↔ OpenAI/Ollama request/response mapping and streaming chunks.
- */
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -11,6 +40,11 @@ exports.mapGeminiToOpenAI = mapGeminiToOpenAI;
 exports.mapOpenAIToGemini = mapOpenAIToGemini;
 exports.mapOpenAIChunkToGemini = mapOpenAIChunkToGemini;
 exports.mapGeminiToolsToOpenAI = mapGeminiToolsToOpenAI;
+/**
+ * OpenAI/Ollama provider translator.
+ * Handles Gemini ↔ OpenAI/Ollama request/response mapping and streaming chunks.
+ */
+const path = __importStar(require("path"));
 const electron_log_1 = __importDefault(require("electron-log"));
 const utils_1 = require("./utils");
 const shared_1 = require("../shared");
@@ -111,7 +145,41 @@ function mapGeminiToOpenAI(geminiBody, modelName) {
                         reasoning_content = thoughtParts.map((p) => p.text || '').join('');
                     }
                     else {
-                        content = (item.parts || []).map((p) => p.text || '').join('');
+                        const parts = item.parts || [];
+                        const partsContent = [];
+                        for (const p of parts) {
+                            if (p.text) {
+                                partsContent.push(p.text);
+                            }
+                            else if (p.fileData) {
+                                const fd = p.fileData;
+                                // Try to read local files directly
+                                try {
+                                    const url = new URL(fd.fileUri);
+                                    if (url.protocol === 'file:') {
+                                        const fs = require('fs');
+                                        const fileContent = fs.readFileSync(url.pathname.replace(/^\//, '').replace(/\//g, path.sep), 'utf-8');
+                                        partsContent.push(`[File content from ${fd.fileUri}]:\n${fileContent}`);
+                                    }
+                                    else {
+                                        partsContent.push(`[File reference: ${fd.fileUri} (${fd.mimeType})]`);
+                                    }
+                                }
+                                catch {
+                                    partsContent.push(`[File reference: ${fd.fileUri} (${fd.mimeType})]`);
+                                }
+                            }
+                            else if (p.inlineData) {
+                                const id = p.inlineData;
+                                if (id.mimeType && id.mimeType.startsWith('image/')) {
+                                    partsContent.push(`[Image: data:${id.mimeType};base64,${id.data}]`);
+                                }
+                                else {
+                                    partsContent.push(`[Inline data: ${id.mimeType}, length: ${(id.data || '').length} chars]`);
+                                }
+                            }
+                        }
+                        content = partsContent.join('\n');
                     }
                     const msg = { role, content };
                     if (reasoning_content)

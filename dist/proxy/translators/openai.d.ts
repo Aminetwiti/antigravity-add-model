@@ -1,7 +1,3 @@
-/**
- * OpenAI/Ollama provider translator.
- * Handles Gemini ↔ OpenAI/Ollama request/response mapping and streaming chunks.
- */
 interface GeminiTool {
     functionDeclarations?: GeminiFunctionDeclaration[];
 }
@@ -31,6 +27,14 @@ interface GeminiPart {
     thought?: boolean;
     functionCall?: GeminiFunctionCall;
     functionResponse?: GeminiFunctionResponse;
+    fileData?: {
+        mimeType: string;
+        fileUri: string;
+    };
+    inlineData?: {
+        mimeType: string;
+        data: string;
+    };
 }
 interface GeminiFunctionCall {
     name: string;

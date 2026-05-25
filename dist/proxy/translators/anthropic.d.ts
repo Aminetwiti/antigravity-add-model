@@ -1,7 +1,3 @@
-/**
- * Anthropic provider translator.
- * Handles Gemini ↔ Anthropic request/response mapping and streaming SSE events.
- */
 interface GeminiTool {
     functionDeclarations?: GeminiFunctionDeclaration[];
 }
