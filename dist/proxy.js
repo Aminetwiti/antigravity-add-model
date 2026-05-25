@@ -260,6 +260,58 @@ function proxyToGoogle(req, res, reqBody) {
     }
     proxyReq.end();
 }
+// ─── File Data Resolver ────────────────────────────────────────────────────
+async function resolveFileData(body, reqHeaders) {
+    const contents = body.contents;
+    if (!contents)
+        return;
+    const authHeader = (reqHeaders['authorization'] || reqHeaders['Authorization'] || '');
+    for (const item of contents) {
+        if (!item.parts)
+            continue;
+        for (let i = 0; i < item.parts.length; i++) {
+            const p = item.parts[i];
+            const fd = p.fileData;
+            if (!fd?.fileUri)
+                continue;
+            try {
+                const uri = fd.fileUri;
+                let fileContent = '';
+                if (uri.startsWith('file://')) {
+                    const fp = uri.replace('file://', '').replace(/\//g, path.sep);
+                    if (fs.existsSync(fp))
+                        fileContent = fs.readFileSync(fp, 'utf-8');
+                }
+                else if (authHeader && uri.startsWith('https://')) {
+                    fileContent = await downloadFileContent(uri, authHeader);
+                }
+                if (fileContent) {
+                    item.parts[i] = { text: '[File content]:\n\n' + fileContent };
+                }
+            }
+            catch (e) {
+                electron_log_1.default.warn('[Proxy] File resolve failed:', e.message);
+            }
+        }
+    }
+}
+function downloadFileContent(url, authHeader) {
+    return new Promise((resolve, reject) => {
+        const u = new URL(url);
+        (u.protocol === 'https:' ? https : http).request({
+            hostname: u.hostname, path: u.pathname + u.search,
+            method: 'GET', headers: { 'Authorization': authHeader }, timeout: 30000,
+        }, (res) => {
+            if (res.statusCode !== 200) {
+                reject(new Error('HTTP ' + res.statusCode));
+                return;
+            }
+            let d = '';
+            res.on('data', (c) => d += c.toString());
+            res.on('end', () => resolve(d));
+        }).on('error', reject).end();
+    });
+}
 // ─── Custom Model Request Handler ─────────────────────────────────────────
 /**
  * Parses the Retry-After header from upstream responses (RFC 7231 §7.1.3).
@@ -1172,7 +1224,10 @@ function handleRequest(req, res) {
                         electron_log_1.default.info(`[Proxy] Intercepting Cloud Code generation for custom model: ${modelName} => ${matchedCustomModel.displayName}`);
                         const isStream = req.url.includes('streamGenerateContent') || req.url.includes('alt=sse');
                         const actualGeminiBody = (reqJson.request || reqJson);
-                        handleCustomModelRequest(res, matchedCustomModel, actualGeminiBody, isStream);
+                        // Resolve fileData URIs then route to translator
+                        resolveFileData(actualGeminiBody, req.headers).then(() => {
+                            handleCustomModelRequest(res, matchedCustomModel, actualGeminiBody, isStream);
+                        });
                         return;
                     }
                 }
@@ -1199,7 +1254,9 @@ function handleRequest(req, res) {
             if (matchedCustomModel) {
                 try {
                     const geminiBody = JSON.parse(bodyStr);
-                    handleCustomModelRequest(res, matchedCustomModel, geminiBody, isStandardStream);
+                    resolveFileData(geminiBody, req.headers).then(() => {
+                        handleCustomModelRequest(res, matchedCustomModel, geminiBody, isStandardStream);
+                    });
                     return;
                 }
                 catch (e) {
