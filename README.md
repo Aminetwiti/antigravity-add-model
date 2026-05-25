@@ -258,7 +258,16 @@ You can configure **multiple models from different providers simultaneously**. A
 | **OpenRouter** | `openrouter` | `apiKey` (OpenRouter API Key) | `https://openrouter.ai/api/v1/chat/completions` |
 | **Ollama** (Local) | `ollama` | *(None required)* | `http://localhost:11434/v1/chat/completions` |
 | **Google AI Studio** | `google` | `apiKey` *(Gemini API Key)* | `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent` |
-| **Custom** (OpenAI-compatible) | `custom` | `apiKey` *(Provider API Key)* | E.g. `https://api.together.xyz/v1`, `https://api.groq.com/openai/v1`, etc. |
+| **DeepSeek** | `deepseek` | `apiKey` | `https://api.deepseek.com/anthropic` |
+| **Groq** | `groq` | `apiKey` | `https://api.groq.com/openai/v1` |
+| **Mistral** | `mistral` | `apiKey` | `https://api.mistral.ai/v1` |
+| **Cerebras** | `cerebras` | `apiKey` | `https://api.cerebras.ai/v1` |
+| **Kimi (Moonshot)** | `kimi` | `apiKey` | `https://api.moonshot.ai/anthropic/v1` |
+| **Fireworks AI** | `fireworks` | `apiKey` | `https://api.fireworks.ai/inference/v1` |
+| **LM Studio** (Local) | `lmstudio` | *(None required)* | `http://localhost:1234/v1` |
+| **llama.cpp** (Local) | `llamacpp` | *(None required)* | `http://localhost:8080/v1` |
+| **NVIDIA NIM** | `nvidia` | `apiKey` | `https://integrate.api.nvidia.com/v1` |
+| **Custom** (OpenAI-compatible) | `custom` | `apiKey` *(Provider API Key)* | Any OpenAI-compatible endpoint |
 
 > [!NOTE]
 > For the **Custom** provider, URLs ending in `/v1` automatically get `/chat/completions` appended. It is fully compatible with Together AI, OpenRouter, Groq, Mistral, and any other OpenAI-compliant endpoint.
